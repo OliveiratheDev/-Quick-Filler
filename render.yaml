@@ -1,0 +1,32 @@
+services:
+  - type: web
+    name: quick-filler-oliveirathedev
+    runtime: docker
+    plan: free
+    region: virginia
+    branch: main
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /healthz
+    autoDeployTrigger: commit
+    envVars:
+      - key: JAVA_TOOL_OPTIONS
+        value: -Xms128m -Xmx256m -XX:MaxMetaspaceSize=128m
+      - key: MAX_UPLOAD_MB
+        value: "10"
+      - key: RETENTION_MINUTES
+        value: "30"
+      - key: WORKER_THREADS
+        value: "1"
+      - key: WORKER_QUEUE
+        value: "5"
+      - key: PDF_MIN_TEXT_CHARACTERS
+        value: "120"
+      - key: OCR_DPI
+        value: "220"
+      - key: OCR_TIMEOUT_SECONDS
+        value: "90"
+      - key: TESSERACT_LANGUAGE
+        value: por+eng
+      - key: TRANSCRIPTION_STORAGE_DIR
+        value: /data

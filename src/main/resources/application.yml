@@ -1,0 +1,31 @@
+server:
+  port: ${PORT:8080}
+  error:
+    include-message: never
+    include-stacktrace: never
+
+spring:
+  servlet:
+    multipart:
+      max-file-size: ${MAX_UPLOAD_MB:15}MB
+      max-request-size: ${MAX_UPLOAD_MB:15}MB
+  jackson:
+    default-property-inclusion: always
+
+app:
+  max-upload-mb: ${MAX_UPLOAD_MB:15}
+  retention-minutes: ${RETENTION_MINUTES:60}
+  worker-threads: ${WORKER_THREADS:2}
+  worker-queue: ${WORKER_QUEUE:20}
+  pdf-min-text-characters: ${PDF_MIN_TEXT_CHARACTERS:120}
+  tesseract-command: ${TESSERACT_COMMAND:tesseract}
+  tesseract-language: ${TESSERACT_LANGUAGE:por+eng}
+  ocr-dpi: ${OCR_DPI:300}
+  ocr-timeout-seconds: ${OCR_TIMEOUT_SECONDS:90}
+  storage-dir: ${TRANSCRIPTION_STORAGE_DIR:${java.io.tmpdir}/quick-filler}
+
+logging:
+  level:
+    root: INFO
+    br.com.quickfiller: INFO
+    org.apache.pdfbox: WARN

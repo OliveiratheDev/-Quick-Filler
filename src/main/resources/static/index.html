@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Quick Filler — revisão de documentos</title>
+    <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+<header class="topbar">
+    <div class="brand-mark" aria-hidden="true">QF</div>
+    <div>
+        <strong>Quick Filler</strong>
+        <span>transcrição revisável</span>
+    </div>
+</header>
+
+<main>
+    <section id="upload-view" class="welcome">
+        <div class="intro">
+            <p class="eyebrow">PDF → revisão → planilha</p>
+            <h1>Confira cada dado antes de exportar.</h1>
+            <p>Envie um cartão de ponto ou holerite. Leituras incertas continuam visíveis como <code>?</code> para você corrigir — nunca como um palpite silencioso.</p>
+            <div class="legend" aria-label="Legenda dos avisos">
+                <span><i class="dot yellow"></i>Requer atenção</span>
+                <span><i class="dot red"></i>Sequência inconsistente</span>
+            </div>
+        </div>
+
+        <form id="upload-form" class="upload-card">
+            <label class="field-label" for="document-type">Tipo de documento</label>
+            <select id="document-type" name="tipo" required>
+                <option value="cartao-ponto">Cartão de ponto</option>
+                <option value="holerite">Holerite</option>
+            </select>
+
+            <label id="drop-zone" class="drop-zone" for="pdf-file">
+                <span class="upload-icon" aria-hidden="true">↑</span>
+                <strong>Escolha um PDF</strong>
+                <span id="file-label">ou arraste o arquivo até aqui</span>
+                <small>PDF válido, até o limite configurado pelo servidor</small>
+            </label>
+            <input id="pdf-file" name="arquivo" type="file" accept="application/pdf,.pdf" required hidden>
+
+            <button id="submit-upload" class="primary" type="submit">Enviar e processar</button>
+            <p id="upload-error" class="error-message" role="alert" hidden></p>
+        </form>
+    </section>
+
+    <section id="processing-view" class="processing" hidden aria-live="polite">
+        <div class="spinner" aria-hidden="true"></div>
+        <p class="eyebrow">Processamento assíncrono</p>
+        <h1 id="processing-title">Lendo o documento…</h1>
+        <p id="processing-message">Verificando texto do PDF e aplicando OCR quando necessário.</p>
+        <div class="progress-track"><span></span></div>
+    </section>
+
+    <section id="review-view" hidden>
+        <div class="review-toolbar">
+            <div>
+                <p class="eyebrow">Revisão</p>
+                <h1 id="review-title">Transcrição concluída</h1>
+                <p id="save-state" class="save-state">Sem alterações pendentes</p>
+            </div>
+            <div class="toolbar-actions">
+                <button id="new-document" class="secondary" type="button">Novo documento</button>
+                <button id="save-button" class="secondary" type="button" disabled>Salvar correções</button>
+                <select id="download-format" aria-label="Formato do download">
+                    <option value="xlsx">Excel (.xlsx)</option>
+                    <option value="csv">CSV (.csv)</option>
+                    <option value="json">JSON (.json)</option>
+                </select>
+                <button id="download-button" class="primary" type="button">Salvar e baixar</button>
+            </div>
+        </div>
+
+        <p id="review-error" class="error-message review-error" role="alert" hidden></p>
+
+        <div class="review-layout">
+            <aside class="pdf-panel">
+                <div class="panel-heading">
+                    <strong>Documento original</strong>
+                    <span>confira sem trocar de janela</span>
+                </div>
+                <object id="pdf-viewer" type="application/pdf" aria-label="PDF enviado">
+                    <p>Seu navegador não exibiu o PDF. <a id="pdf-fallback" href="#" target="_blank" rel="noreferrer">Abrir em outra aba</a>.</p>
+                </object>
+            </aside>
+
+            <section class="editor-panel">
+                <div class="panel-heading editor-heading">
+                    <div>
+                        <strong>Dados extraídos</strong>
+                        <span>as cores são recalculadas a partir dos valores abaixo</span>
+                    </div>
+                    <div class="legend compact">
+                        <span><i class="dot yellow"></i>Atenção</span>
+                        <span><i class="dot red"></i>Sequência</span>
+                    </div>
+                </div>
+                <div id="editor" class="editor"></div>
+            </section>
+        </div>
+    </section>
+</main>
+
+<script src="/app.js" defer></script>
+</body>
+</html>

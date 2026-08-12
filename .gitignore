@@ -1,0 +1,12 @@
+target/
+.mvn/repository/
+.mvn/wrapper/dists/
+.idea/
+.vscode/
+*.iml
+.env
+quick-filler-data/
+work/
+outputs/
+exemplos/*.pdf
+entregas/*.xlsx

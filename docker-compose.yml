@@ -1,0 +1,31 @@
+services:
+  quick-filler:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: quick-filler:local
+    ports:
+      - "${PORT:-8080}:8080"
+    environment:
+      PORT: 8080
+      MAX_UPLOAD_MB: ${MAX_UPLOAD_MB:-15}
+      RETENTION_MINUTES: ${RETENTION_MINUTES:-60}
+      WORKER_THREADS: ${WORKER_THREADS:-2}
+      WORKER_QUEUE: ${WORKER_QUEUE:-20}
+      PDF_MIN_TEXT_CHARACTERS: ${PDF_MIN_TEXT_CHARACTERS:-120}
+      OCR_DPI: ${OCR_DPI:-300}
+      OCR_TIMEOUT_SECONDS: ${OCR_TIMEOUT_SECONDS:-90}
+      TESSERACT_LANGUAGE: ${TESSERACT_LANGUAGE:-por+eng}
+      TRANSCRIPTION_STORAGE_DIR: /data
+    volumes:
+      - quick-filler-data:/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "--silent", "http://localhost:8080/healthz"]
+      interval: 10s
+      timeout: 3s
+      start_period: 25s
+      retries: 5
+
+volumes:
+  quick-filler-data:

@@ -1,0 +1,20 @@
+{
+  "name": "desafio-programador",
+  "version": "2.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Desafio técnico da Quick Filler: transcrição de cartões de ponto e holerites em PDF para planilha, com aplicação web publicada",
+  "engines": {
+    "node": ">=22"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@github.com/quick-filler/desafio-programador.git"
+  },
+  "author": "Quick Filler <contato@quickfiller.org>",
+  "license": "CC0-1.0",
+  "bugs": {
+    "url": "https://github.com/quick-filler/desafio-programador/issues"
+  },
+  "homepage": "https://github.com/quick-filler/desafio-programador#readme"
+}
