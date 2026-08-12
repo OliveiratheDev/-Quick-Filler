@@ -53,12 +53,15 @@ public final class TranscriptionValidator {
     }
 
     private static void validatePayslip(PayslipTranscription value) {
-        Set<Integer> pages = new HashSet<>();
         Set<String> baseNames = Set.of(
                 "base inss", "base de inss", "base ir", "base de ir", "base irrf", "base de irrf",
                 "fgts", "total vencimentos", "total de vencimentos", "valor líquido", "valor liquido");
+        int previousPage = 0;
         for (PayslipTranscription.Page page : value.pages()) {
-            if (page == null || page.page() < 1 || !pages.add(page.page())) invalid("page deve começar em 1 e não se repetir");
+            if (page == null || page.page() < 1 || page.page() < previousPage) {
+                invalid("page deve começar em 1 e preservar a ordem do PDF");
+            }
+            previousPage = page.page();
             if (!page.month().isBlank() && !page.month().contains("?")
                     && !page.month().matches("0[1-9]|1[0-2]")) {
                 invalid("month legível deve estar entre 01 e 12");

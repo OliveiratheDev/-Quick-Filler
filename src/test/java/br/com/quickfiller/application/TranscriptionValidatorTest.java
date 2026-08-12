@@ -1,10 +1,13 @@
 package br.com.quickfiller.application;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.assertThatCode;
 
 import br.com.quickfiller.api.ApiException;
 import br.com.quickfiller.domain.DocumentType;
+import br.com.quickfiller.domain.payslip.PayslipTranscription;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.util.List;
 import org.junit.jupiter.api.Test;
 
 class TranscriptionValidatorTest {
@@ -29,5 +32,22 @@ class TranscriptionValidatorTest {
         assertThatThrownBy(() -> TranscriptionValidator.validateJsonTypes(DocumentType.TIMECARD, missingRaw))
                 .isInstanceOf(ApiException.class)
                 .hasMessageContaining("time_raw deve ser String");
+    }
+
+    @Test
+    void payslipAllowsCompetencesSharingTheSamePhysicalPageButRejectsPageReordering() {
+        var valid = new PayslipTranscription(List.of(
+                new PayslipTranscription.Page(1, "2017", "04", List.of(), List.of()),
+                new PayslipTranscription.Page(1, "2017", "05", List.of(), List.of()),
+                new PayslipTranscription.Page(2, "2017", "06", List.of(), List.of())));
+        assertThatCode(() -> TranscriptionValidator.validate(DocumentType.PAYSLIP, valid))
+                .doesNotThrowAnyException();
+
+        var reordered = new PayslipTranscription(List.of(
+                new PayslipTranscription.Page(2, "2017", "06", List.of(), List.of()),
+                new PayslipTranscription.Page(1, "2017", "07", List.of(), List.of())));
+        assertThatThrownBy(() -> TranscriptionValidator.validate(DocumentType.PAYSLIP, reordered))
+                .isInstanceOf(ApiException.class)
+                .hasMessageContaining("preservar a ordem");
     }
 }

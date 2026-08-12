@@ -59,12 +59,12 @@ Os oito PDFs recebidos estão em `exemplos/`. Eles foram renderizados e inspecio
 | `time-card-02.pdf` | OCR | 153 dias; competência lida do cabeçalho |
 | `time-card-03.pdf` | OCR | 280 dias; até 4 batidas |
 | `time-card-04.pdf` | OCR manuscrito | 5 páginas preservadas, sem dias confiáveis |
-| `payroll-01.pdf` | texto | ficha financeira preservada como 5 páginas vazias; bônus não implementado |
+| `payroll-01.pdf` | texto | 25 competências; 426 verbas e 226 bases; várias competências por página física |
 | `payroll-02.pdf` | texto | 5 competências; tabelas MÊS e ACERTO |
 | `payroll-03.pdf` | texto | 5 competências; verbas e bases separadas |
 | `payroll-04.pdf` | OCR | 5 páginas; recibos duplicados deduplicados |
 
-As planilhas foram geradas localmente em `entregas/`. Por privacidade, os PDFs recebidos e os XLSX resultantes não são versionados; os READMEs dessas pastas registram os resultados observados. Resultado vazio é deliberado nos dois layouts fora da confiança atual; a interface permite revisão manual.
+As planilhas foram geradas localmente em `entregas/`. Por privacidade, os PDFs recebidos e os XLSX resultantes não são versionados; os READMEs dessas pastas registram os resultados observados. O cartão manuscrito permanece vazio por falta de leitura confiável; a interface permite revisão manual.
 
 ## Configuração
 
@@ -91,7 +91,7 @@ O projeto usa Java 17, Spring Boot 3, PDFBox, Tesseract e Apache POI. O build Do
 docker compose build quick-filler
 ```
 
-São 19 testes cobrindo contrato/status, JSON literal, uploads inválidos, parsers observados, datas, meses, warnings e estilos/ordem do XLSX.
+São 20 testes cobrindo contrato/status, JSON literal, uploads inválidos, parsers observados, ficha financeira com competências repetindo página física, datas, meses, warnings e estilos/ordem do XLSX.
 
 Para continuar com Codex, abra esta pasta como repositório: `AGENTS.md` é carregado automaticamente e encaminha para o contrato completo em `CODEX.md`.
 

@@ -33,12 +33,12 @@ O parser inicial procurava `dd/mm/aaaa` em cada linha. Nos dois primeiros cartõ
 Não houve edição humana externa durante esta sessão. Os dois extratores foram reescritos pelo agente após a inspeção visual/textual, em vez de acumular exceções sobre o parser sintético.
 
 - `TimecardExtractor`: ganhou competência de cabeçalho, dia isolado, merge consecutivo e limites semânticos das colunas.
-- `PayslipExtractor`: ganhou máquina de estados por cabeçalho, colunas paralelas, valores negativos, deduplicação e corte explícito de ficha financeira.
+- `PayslipExtractor`: ganhou máquina de estados por cabeçalho, colunas paralelas, valores negativos, deduplicação e expansão da ficha financeira por competência.
 - `TokenSanitizer`: passou a preservar sinal monetário.
 - O fallback OCR foi recalibrado com números medidos nos PDFs.
 - README, `SOLUCAO.md` e este arquivo foram reescritos porque alegavam ausência de exemplos.
 
-A ficha financeira não recebeu uma implementação improvisada. O enunciado a classifica como bônus e o contrato básico não resolve todas as competências por página; devolver páginas vazias é mais honesto que fazer a saída parecer precisa.
+Depois da primeira entrega, a captura da interface mostrou que o corte da ficha financeira era visível como cinco páginas vazias. O layout real foi então inspecionado novamente e recebeu um parser separado, orientado pelos marcadores de competência e pelo período impresso, sem reutilizar o parser genérico de holerite.
 
 ## Três decisões com mais de uma resposta razoável
 
@@ -46,9 +46,9 @@ A ficha financeira não recebeu uma implementação improvisada. O enunciado a c
 
 Coordenadas de palavras facilitariam as tabelas paralelas e evitariam alguns problemas de ordem. O próprio enunciado alerta que posição absoluta quebra entre layouts. Foi escolhida uma máquina de estados orientada a cabeçalhos, funcionando tanto com PDFBox quanto Tesseract. O custo é menor precisão quando a camada textual embaralha label e valor; tokens com bounding box são a evolução planejada.
 
-### 2. Ficha financeira vazia, não parcialmente “convertida”
+### 2. Uma entrada por competência sem perder a página física
 
-Era possível codificar o layout específico de `payroll-01`. Isso consumiria tempo em um bônus e exigiria uma decisão sobre várias competências compartilhando a mesma página. A escolha foi preservar cinco páginas vazias e documentar o corte. Ela perde cobertura, mas evita centenas de verbas/bases falsas que o parser genérico produziu no primeiro ensaio.
+O enunciado do bônus manda compartilhar o mesmo `page` entre competências. O JSON passou a aceitar páginas repetidas em ordem não decrescente, e o extrator gera uma entrada por competência. Quando dezembro/2018 aparece em duas páginas físicas, as entradas não são unidas: preservar a origem física é mais auditável do que escolher uma página ou apagar essa distinção.
 
 ### 3. Primeira ocorrência no XLSX para labels duplicadas
 
@@ -65,7 +65,7 @@ Em múltiplas réplicas, o mapa em memória quebra afinidade: um GET pode chegar
 ## Onde não há confiança total
 
 - `time-card-04`: manuscrito e baixo contraste; a saída automática fica vazia.
-- `payroll-01`: ficha financeira fora do core; páginas vazias deliberadas.
+- `payroll-01`: o layout vertical observado está coberto, mas uma ficha financeira em matriz horizontal ou sem marcador `Mês` não usa essa estratégia. Competências iguais em páginas físicas diferentes ficam separadas.
 - `payroll-04`: Tesseract separa números/totais, mas perdeu caracteres iniciais de alguns labels e uma competência. Não foram corrigidos por palpite.
 - Um dígito OCR incorreto com sintaxe válida pode passar, porque confiança por caractere não chega ao domínio.
 - Holerites com ordem textual muito diferente podem preservar a página, mas perder bases ou verbas.
@@ -73,10 +73,12 @@ Em múltiplas réplicas, o mapa em memória quebra afinidade: um GET pode chegar
 
 ## Estado verificável desta entrega
 
-- 19 testes passaram no build Docker, sem falhas.
+- 20 testes passaram no build Docker, sem falhas.
 - O container ficou saudável com Tesseract `por+eng`.
 - Os oito PDFs retornaram POST 202, passaram por polling e concluíram sem travar request HTTP.
 - Os dois tipos tiveram PUT seguido de download validado em XLSX, CSV e JSON.
+- `payroll-01` passou de cinco páginas vazias para 25 entradas não vazias, com 426 verbas e 226 bases; todos os valores de verba/base passaram pela validação de string monetária brasileira.
+- A primeira versão do parser da ficha passou no teste unitário, mas o job real falhou porque o validador ainda proibia `page` repetido. Depois de liberar repetições apenas em ordem não decrescente, julho/2018 ainda perdeu linhas que continuavam na página física seguinte; a contagem por competência revelou isso e o estado passou a atravessar a quebra de página.
 - As planilhas de `exemplos/` foram geradas pela API e salvas localmente em `entregas/`; PDFs e XLSX não foram publicados no Git por poderem conter dados trabalhistas pessoais.
 - A automação do navegador integrado não iniciou por bloqueio `CreateProcessAsUserW` do sandbox Windows. Como fallback, o JavaScript da SPA passou em verificação sintática, `/` respondeu 200 e os elementos de polling, PDF, salvar e download foram conferidos no código; não alego um teste visual automatizado do navegador nesta máquina.
 - A porta padrão 8080 estava ocupada por outro serviço na máquina de validação; o Compose foi testado em 18080 via arquivo temporário em `work/`, sem interromper processos alheios.

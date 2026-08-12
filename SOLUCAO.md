@@ -74,10 +74,11 @@ Há suporte observado para:
 - colunas paralelas de proventos/descontos em scan;
 - múltiplas tabelas MÊS/ACERTO na mesma página;
 - recibo duplicado na mesma página, deduplicado por registro exato;
+- ficha financeira vertical, expandida para uma entrada por competência com o mesmo `page` físico;
 - competência numérica ou nome do mês;
 - valores negativos e referências textuais.
 
-`payroll-01` é ficha financeira com várias competências por página, explicitamente bônus no enunciado. Em vez de aplicar o parser de holerite e produzir centenas de linhas incorretas, o extrator devolve as cinco páginas vazias. `payroll-02`, `03` e `04` são parcialmente suportados. No scan `payroll-04`, uma competência ficou ilegível e alguns labels perderam caracteres; esses são limites reais do OCR atual.
+`payroll-01` é uma ficha financeira vertical. O extrator localiza o período completo e cada marcador `Mês`, resolve o ano de dois dígitos somente quando há uma única correspondência no período e mantém o número da página física. Seções repetidas da mesma competência e página, como folha normal e PLR, são unidas; uma seção que continua na página seguinte também é preservada. O PDF real gerou 25 entradas, 426 verbas e 226 bases. `payroll-02`, `03` e `04` continuam parcialmente suportados. No scan `payroll-04`, uma competência ficou ilegível e alguns labels perderam caracteres; esses são limites reais do OCR atual.
 
 ## Warnings e exportação
 
@@ -130,14 +131,14 @@ O repositório inclui `render.yaml` para um Web Service Docker gratuito no Rende
 
 ## Testes escolhidos
 
-São 19 testes. Eles protegem: ciclo/status e contrato JSON, upload inválido, substituição via PUT, datas impossíveis, dia isolado + competência, merge de batidas, exclusão de horários administrativos, verbas/bases, colunas paralelas, valor negativo, ficha financeira vazia, sequência dezembro/janeiro, competência ilegível intermediária, batidas ímpares, união/ordem de labels e cores/borda do XLSX.
+São 20 testes. Eles protegem: ciclo/status e contrato JSON, upload inválido, substituição via PUT, datas impossíveis, dia isolado + competência, merge de batidas, exclusão de horários administrativos, verbas/bases, colunas paralelas, valor negativo, expansão de ficha financeira, continuação entre páginas e páginas físicas repetidas, sequência dezembro/janeiro, competência ilegível intermediária, batidas ímpares, união/ordem de labels e cores/borda do XLSX.
 
 Esses casos foram escolhidos porque falhas neles geram dado errado com aparência válida ou quebram a avaliação automática.
 
 ## Limitações e cortes reais
 
 - Sem deploy público: não houve ambiente/credencial de hospedagem.
-- Ficha financeira (`payroll-01`) não implementada; é bônus e sai vazia.
+- A ficha financeira é suportada para o layout vertical observado. Duas folhas da mesma competência em páginas físicas diferentes permanecem como entradas distintas, pois uni-las apagaria a origem `page` exigida pelo contrato.
 - Cartão manuscrito (`time-card-04`) não é transcrito com segurança.
 - Confiança OCR por caractere não é transportada.
 - Alguns labels OCR válidos lexicalmente podem ter perdido a primeira letra; não foram “corrigidos” por dicionário.

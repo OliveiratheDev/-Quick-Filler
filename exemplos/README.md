@@ -11,7 +11,7 @@ Estes oito arquivos vieram do pacote fornecido junto ao pedido de implementaçã
 
 ## Holerites
 
-- `payroll-01.pdf`: ficha financeira com várias competências por página (bônus fora do core).
+- `payroll-01.pdf`: ficha financeira vertical com várias competências por página; expandida em uma entrada por competência.
 - `payroll-02.pdf`: texto embutido; tabelas MÊS e ACERTO na mesma página.
 - `payroll-03.pdf`: texto embutido; tabela tradicional de proventos/descontos e bases.
 - `payroll-04.pdf`: scan; dois recibos duplicados por página e colunas paralelas.

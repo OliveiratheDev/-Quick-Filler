@@ -30,16 +30,28 @@ public class PayslipExtractor implements TranscriptionExtractor {
     private static final Pattern CODE = Pattern.compile("^\\s*([\\p{Alnum}?/]{2,8})\\s+");
     private static final Pattern TEXT_REFERENCE = Pattern.compile(
             "(?iu)^(.*?)(?:\\s{2,}|\\s)([A-Z.]+/\\d{2,4}|S/\\s*F[ÉE]RIAS)$");
+    private static final Pattern FINANCIAL_PERIOD = Pattern.compile(
+            "(?iu)per[ií]odo\\s*:\\s*((?:19|20)\\d{2})\\s*/\\s*\\d{1,2}"
+                    + "\\s*a\\s*((?:19|20)\\d{2})\\s*/\\s*\\d{1,2}");
+    private static final Pattern FINANCIAL_COMPETENCE = Pattern.compile(
+            "(?iu)m[eê]s\\s*:\\s*([\\p{L}]{3,9})\\s*[-/]\\s*(\\d{2}|(?:19|20)\\d{2})");
+    private static final Pattern FINANCIAL_CODE = Pattern.compile(
+            "(?<!\\S)(\\d{1,4})(?=\\s+\\p{L})");
+    private static final Pattern FINANCIAL_REFERENCE = Pattern.compile(
+            "(?u)^(.*\\D)\\s+([+-]?\\d+(?:,\\d{1,3})?)$");
     private static final List<BasePattern> BASE_PATTERNS = List.of(
-            base("(?iu)Base\\s+(?:de\\s+)?I\\.?\\s*N\\.?\\s*S\\.?\\s*S\\.?", "Base INSS"),
+            base("(?iu)Base\\s+(?:de\\s+)?I\\.?\\s*N\\.?\\s*S\\.?\\s*S\\.?|BASEDECALCULODOINSS", "Base INSS"),
             base("(?iu)Sal\\.?\\s*Contrib\\.?\\s*INSS", "Base INSS"),
-            base("(?iu)Base\\s+(?:de\\s+|C[aá]lc\\.?\\s+)?I\\.?\\s*R\\.?\\s*R?\\.?\\s*F?\\.?", "Base IR"),
-            base("(?iu)Base\\s+C[aá]lc\\.?\\s+F\\.?\\s*G\\.?\\s*T\\.?\\s*S\\.?", "Base FGTS"),
-            base("(?iu)F\\.?\\s*G\\.?\\s*T\\.?\\s*S\\.?\\s*(?:do\\s+M[eê]s|M[eê]s)?", "FGTS"),
-            base("(?iu)[Tt]?[Oo]tal\\s+(?:de\\s+)?(?:Vencimentos|Proventos)", "Total Vencimentos"),
-            base("(?iu)[Tt]?[Oo]tal\\s+(?:de\\s+)?Descontos", "Total Descontos"),
-            base("(?iu)(?:Valor\\s+)?L[ií]quido\\b(?:\\s+a\\s+Receber)?", "Valor Líquido"));
+            base("(?iu)Base\\s+(?:de\\s+|C[aá]lc\\.?\\s+)?I\\.?\\s*R\\.?\\s*R?\\.?\\s*F?\\.?|BASEDECALCULODOIRF", "Base IR"),
+            base("(?iu)Base\\s+C[aá]lc\\.?\\s+F\\.?\\s*G\\.?\\s*T\\.?\\s*S\\.?|BASEDECALCULODOFGTS", "Base FGTS"),
+            base("(?iu)F\\.?\\s*G\\.?\\s*T\\.?\\s*S\\.?\\s*(?:do\\s+M[eê]s|M[eê]s)?|VALORDOFGTS", "FGTS"),
+            base("(?iu)[Tt]?[Oo]tal\\s+(?:de\\s+)?(?:Vencimentos|Proventos)|TOT\\.RENDIMENTOS", "Total Vencimentos"),
+            base("(?iu)[Tt]?[Oo]tal\\s+(?:de\\s+)?Descontos|TOTALDESCONTOS", "Total Descontos"),
+            base("(?iu)(?:Valor\\s+)?L[ií]quido\\b(?:\\s+a\\s+Receber)?|SALARIOLIQUIDONOMES", "Valor Líquido"),
+            base("(?iu)VALORDOIRFARECOLHER", "Valor IR a Recolher"));
     private static final Map<String, String> MONTHS = monthNames();
+    private static final Map<String, String> FINANCIAL_MONTHS = financialMonthNames();
+    private static final Set<String> FINANCIAL_SUMMARIES = Set.of("remuneracaomes", "dias/horastrab");
 
     @Override
     public DocumentType supports() { return DocumentType.PAYSLIP; }
@@ -49,9 +61,7 @@ public class PayslipExtractor implements TranscriptionExtractor {
         boolean financialStatement = pages.stream().map(PageText::text).map(PayslipExtractor::normalize)
                 .anyMatch(text -> text.contains("fichafinanceira") || text.contains("ficha financeira"));
         if (financialStatement) {
-            return new PayslipTranscription(pages.stream()
-                    .map(page -> new Page(page.page(), "", "", List.<Field>of(), List.<Base>of()))
-                    .toList());
+            return extractFinancialStatement(pages);
         }
 
         List<Page> result = new ArrayList<>();
@@ -124,6 +134,146 @@ public class PayslipExtractor implements TranscriptionExtractor {
                     deduplicateFields(fields), deduplicateBases(bases)));
         }
         return new PayslipTranscription(result);
+    }
+
+    private PayslipTranscription extractFinancialStatement(List<PageText> pages) {
+        FinancialPeriod period = findFinancialPeriod(pages);
+        List<Page> result = new ArrayList<>();
+        FinancialSection current = null;
+        for (PageText physicalPage : pages) {
+            boolean continuedFromPreviousPage = current != null;
+            boolean foundCompetence = false;
+            for (String line : physicalPage.text().split("\\R")) {
+                Matcher competenceMatcher = FINANCIAL_COMPETENCE.matcher(line);
+                if (competenceMatcher.find()) {
+                    foundCompetence = true;
+                    if (current != null) {
+                        String previousSectionRemainder = line.substring(competenceMatcher.end()).strip();
+                        if (!previousSectionRemainder.isBlank()) {
+                            extractFinancialLine(previousSectionRemainder, current);
+                        }
+                        addFinancialSection(result, current);
+                    }
+                    current = new FinancialSection(physicalPage.page(),
+                            financialCompetence(competenceMatcher.group(1), competenceMatcher.group(2), period));
+                    continue;
+                }
+                if (current != null) extractFinancialLine(line, current);
+            }
+            if (!continuedFromPreviousPage && !foundCompetence) {
+                result.add(new Page(physicalPage.page(), "", "", List.of(), List.of()));
+            }
+        }
+        if (current != null) addFinancialSection(result, current);
+        return new PayslipTranscription(result);
+    }
+
+    private FinancialPeriod findFinancialPeriod(List<PageText> pages) {
+        for (PageText page : pages) {
+            Matcher matcher = FINANCIAL_PERIOD.matcher(page.text());
+            if (matcher.find()) {
+                return new FinancialPeriod(Integer.parseInt(matcher.group(1)), Integer.parseInt(matcher.group(2)));
+            }
+        }
+        return new FinancialPeriod(-1, -1);
+    }
+
+    private Competence financialCompetence(String monthRaw, String yearRaw, FinancialPeriod period) {
+        String month = FINANCIAL_MONTHS.getOrDefault(normalize(monthRaw), "??");
+        if (yearRaw.length() == 4) return new Competence(yearRaw, month);
+
+        int suffix = Integer.parseInt(yearRaw);
+        List<Integer> candidates = new ArrayList<>();
+        if (period.isKnown()) {
+            for (int year = period.startYear(); year <= period.endYear(); year++) {
+                if (year % 100 == suffix) candidates.add(year);
+            }
+        }
+        String year = candidates.size() == 1 ? Integer.toString(candidates.get(0)) : "??" + yearRaw;
+        return new Competence(year, month);
+    }
+
+    private void extractFinancialLine(String line, FinancialSection section) {
+        List<BaseOccurrence> occurrences = baseOccurrences(line);
+        if (!occurrences.isEmpty()) extractBases(line, occurrences, section.bases());
+
+        String fieldText = withoutBaseSegments(line, occurrences).strip();
+        if (fieldText.isBlank()) return;
+        List<MatchValue> values = amounts(fieldText);
+        if (values.isEmpty()) return;
+
+        int split = -1;
+        Matcher codeMatcher = FINANCIAL_CODE.matcher(fieldText);
+        while (codeMatcher.find()) {
+            if (codeMatcher.start() > values.get(0).end()) {
+                split = codeMatcher.start();
+                break;
+            }
+        }
+        if (split < 0) {
+            addFinancialField(section, fieldText);
+            return;
+        }
+        addFinancialField(section, fieldText.substring(0, split));
+        addFinancialField(section, fieldText.substring(split));
+    }
+
+    private String withoutBaseSegments(String line, List<BaseOccurrence> occurrences) {
+        if (occurrences.isEmpty()) return line;
+        char[] remaining = line.toCharArray();
+        for (int index = 0; index < occurrences.size(); index++) {
+            BaseOccurrence occurrence = occurrences.get(index);
+            int limit = index + 1 < occurrences.size() ? occurrences.get(index + 1).start() : line.length();
+            Matcher amount = MONEY.matcher(line);
+            amount.region(occurrence.end(), limit);
+            int end = amount.find() ? amount.end(1) : occurrence.end();
+            for (int position = occurrence.start(); position < end; position++) remaining[position] = ' ';
+        }
+        return new String(remaining);
+    }
+
+    private void addFinancialField(FinancialSection section, String rawSegment) {
+        String segment = rawSegment.strip();
+        List<MatchValue> values = amounts(segment);
+        if (values.isEmpty()) return;
+
+        Matcher codeMatcher = Pattern.compile("^\\s*(\\d{1,4})\\s+(?=\\p{L})").matcher(segment);
+        String code = codeMatcher.find() ? codeMatcher.group(1) : "";
+        int labelStart = codeMatcher.find(0) ? codeMatcher.end() : 0;
+        MatchValue firstValue = values.get(0);
+        String label = cleanLabel(segment.substring(labelStart, firstValue.start()));
+        String reference = "";
+        if (values.size() >= 2) {
+            reference = TokenSanitizer.safeBrazilianNumber(firstValue.value());
+        } else {
+            Matcher referenceMatcher = FINANCIAL_REFERENCE.matcher(label);
+            if (referenceMatcher.matches()) {
+                label = cleanLabel(referenceMatcher.group(1));
+                reference = referenceMatcher.group(2);
+            }
+        }
+        if (label.isBlank() || (code.isBlank() && FINANCIAL_SUMMARIES.contains(normalize(label)))) return;
+        String value = TokenSanitizer.safeBrazilianNumber(values.get(values.size() - 1).value());
+        section.fields().add(new Field(code, label, reference, value));
+    }
+
+    private void addFinancialSection(List<Page> result, FinancialSection section) {
+        Page page = new Page(section.page(), section.competence().year(), section.competence().month(),
+                deduplicateFields(section.fields()), deduplicateBases(section.bases()));
+        if (!result.isEmpty()) {
+            Page previous = result.get(result.size() - 1);
+            if (previous.page() == page.page() && previous.year().equals(page.year())
+                    && previous.month().equals(page.month())) {
+                List<Field> fields = new ArrayList<>(previous.fields());
+                fields.addAll(page.fields());
+                List<Base> bases = new ArrayList<>(previous.bases());
+                bases.addAll(page.bases());
+                result.set(result.size() - 1, new Page(page.page(), page.year(), page.month(),
+                        deduplicateFields(fields), deduplicateBases(bases)));
+                return;
+            }
+        }
+        result.add(page);
     }
 
     private Competence findCompetence(String text) {
@@ -320,8 +470,24 @@ public class PayslipExtractor implements TranscriptionExtractor {
         return months;
     }
 
+    private static Map<String, String> financialMonthNames() {
+        Map<String, String> months = new LinkedHashMap<>();
+        String[] names = {"jan", "fev", "mar", "abr", "mai", "jun",
+                "jul", "ago", "set", "out", "nov", "dez"};
+        for (int index = 0; index < names.length; index++) months.put(names[index], String.format("%02d", index + 1));
+        return months;
+    }
+
     private record Competence(String year, String month) {}
     private record MatchValue(int start, int end, String value) {}
     private record BasePattern(Pattern pattern, String label) {}
     private record BaseOccurrence(int start, int end, String label) {}
+    private record FinancialPeriod(int startYear, int endYear) {
+        private boolean isKnown() { return startYear >= 1900 && endYear >= startYear; }
+    }
+    private record FinancialSection(int page, Competence competence, List<Field> fields, List<Base> bases) {
+        private FinancialSection(int page, Competence competence) {
+            this(page, competence, new ArrayList<>(), new ArrayList<>());
+        }
+    }
 }
