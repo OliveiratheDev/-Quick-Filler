@@ -127,7 +127,7 @@ A imagem final usa JRE 17, Tesseract português/inglês, usuário sem privilégi
 
 ## Deploy
 
-O repositório inclui `render.yaml` para um Web Service Docker gratuito no Render. A configuração usa healthcheck em `/healthz`, uma única thread de OCR, fila curta, DPI 220 e limite explícito da JVM para conviver com a memória reduzida da instância de demonstração. O filesystem gratuito é efêmero: jobs e PDFs podem desaparecer em reinícios, além da limpeza normal por retenção.
+O repositório inclui `render.yaml` para um Web Service Docker gratuito no Render, publicado em <https://quick-filler-oliveirathedev.onrender.com/>. Em 12/08/2026, a interface e `/healthz` responderam HTTP 200 pela internet. A configuração usa uma única thread de OCR, fila curta, DPI 220 e limite explícito da JVM para conviver com a memória reduzida da instância de demonstração. O filesystem gratuito é efêmero: jobs e PDFs podem desaparecer em reinícios, além da limpeza normal por retenção.
 
 ## Testes escolhidos
 
@@ -137,7 +137,6 @@ Esses casos foram escolhidos porque falhas neles geram dado errado com aparênci
 
 ## Limitações e cortes reais
 
-- Sem deploy público: não houve ambiente/credencial de hospedagem.
 - A ficha financeira é suportada para o layout vertical observado. Duas folhas da mesma competência em páginas físicas diferentes permanecem como entradas distintas, pois uni-las apagaria a origem `page` exigida pelo contrato.
 - Cartão manuscrito (`time-card-04`) não é transcrito com segurança.
 - Confiança OCR por caractere não é transportada.

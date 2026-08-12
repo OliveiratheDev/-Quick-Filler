@@ -18,6 +18,8 @@ Abra [http://localhost:8080](http://localhost:8080). O healthcheck está em [htt
 
 ## Deploy no Render
 
+[Aplicação publicada](https://quick-filler-oliveirathedev.onrender.com/) · [Healthcheck](https://quick-filler-oliveirathedev.onrender.com/healthz)
+
 [![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/OliveiratheDev/-Quick-Filler)
 
 O `render.yaml` cria um Web Service Docker no plano gratuito, configura `/healthz`, limita a memória da JVM e reduz a concorrência do OCR para os recursos disponíveis. O serviço gratuito pode hibernar após inatividade e usa armazenamento efêmero; por isso os PDFs continuam sujeitos à retenção curta e também desaparecem em reinícios.
